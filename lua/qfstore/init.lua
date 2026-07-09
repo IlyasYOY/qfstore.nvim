@@ -1,6 +1,12 @@
 local M = {}
+local config = require "qfstore.config"
 
 local SUFFIX = ".json"
+
+---@class qfstore.Config
+---@field store_dir? string|fun(cwd: string): string
+---@field default_name? fun(): string
+---@field open_quickfix? boolean
 
 ---@class qfstore.Entry
 ---@field name string
@@ -15,7 +21,13 @@ local SUFFIX = ".json"
 ---Return the absolute quickfix store path for the current working directory.
 ---@return string
 local function store_dir()
-    return vim.fs.joinpath(vim.fn.getcwd(), ".vim", "lists")
+    return config.store_dir()
+end
+
+---Configure qfstore. Calling setup is optional; omitted options use defaults.
+---@param opts? qfstore.Config
+function M.setup(opts)
+    config.setup(opts)
 end
 
 ---Ensure the store directory exists.
@@ -141,7 +153,7 @@ function M.store(opts)
     local winid = opts.winid or 0
     local name = opts.name
     if not name or name == "" then
-        name = os.date "%Y%m%d-%H%M%S"
+        name = config.default_name()
     end
 
     local items
@@ -211,7 +223,7 @@ function M.load(opts)
         vim.fn.setqflist({}, " ", what)
     end
 
-    if not loclist then
+    if not loclist and config.open_quickfix() then
         vim.cmd "botright copen"
     end
 

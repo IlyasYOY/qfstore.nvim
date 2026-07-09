@@ -1,11 +1,12 @@
 local qfstore = require "qfstore"
+local config = require "qfstore.config"
 
 local function default_name(args)
     local name = args.fargs and args.fargs[1]
     if name and name ~= "" then
         return name
     end
-    return os.date "%Y%m%d-%H%M%S"
+    return config.default_name()
 end
 
 local function store_with_collision_check(name, loclist)

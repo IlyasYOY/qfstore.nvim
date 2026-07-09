@@ -19,6 +19,11 @@ With Neovim's built-in `vim.pack`:
 vim.pack.add {
     { src = "https://github.com/IlyasYOY/qfstore.nvim" },
 }
+
+require("qfstore").setup {
+    store_dir = ".vim/lists",
+    open_quickfix = true,
+}
 ```
 
 With [lazy.nvim](https://github.com/folke/lazy.nvim):
@@ -26,10 +31,39 @@ With [lazy.nvim](https://github.com/folke/lazy.nvim):
 ```lua
 {
     "IlyasYOY/qfstore.nvim",
+    opts = {
+        store_dir = ".vim/lists",
+        open_quickfix = true,
+    },
 }
 ```
 
-The plugin registers its commands automatically. There is no `setup()` call.
+The plugin registers its commands automatically. Calling `setup()` is optional;
+without it, qfstore keeps the defaults documented below.
+
+## Configuration
+
+```lua
+require("qfstore").setup {
+    -- A relative path is resolved from Neovim's current working directory.
+    -- This may also be a function that receives the current working directory.
+    store_dir = function(cwd)
+        return vim.fs.joinpath(cwd, ".vim", "lists")
+    end,
+
+    -- Used by the Lua API and commands when no explicit name is supplied.
+    default_name = function()
+        return os.date "%Y%m%d-%H%M%S"
+    end,
+
+    -- Open the quickfix window after loading a quickfix entry.
+    open_quickfix = true,
+}
+```
+
+Each `setup()` call starts from these defaults, so omitted options are reset to
+their default values. Oil detection remains automatic and falls back to
+`:edit` when Oil is unavailable.
 
 ## Commands
 
@@ -49,7 +83,7 @@ Storing under an existing name asks before overwriting.
 
 ## Storage
 
-Entries are stored relative to Neovim's current working directory:
+By default, entries are stored relative to Neovim's current working directory:
 
 ```text
 <cwd>/.vim/lists/<name>.json

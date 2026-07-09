@@ -75,7 +75,10 @@ local function with_project(run)
     vim.fn.delete(project, "rf")
     vim.fn.mkdir(project, "p")
     vim.cmd.cd(project)
+    vim.fn.setqflist({}, "f")
+    pcall(vim.fn.setloclist, 0, {}, "f")
     vim.notify = function() end
+    qfstore.setup()
 
     local ok, err = xpcall(function()
         run(project)
@@ -86,13 +89,14 @@ local function with_project(run)
     if vim.api.nvim_win_is_valid(original_win) then
         vim.api.nvim_set_current_win(original_win)
     end
-    vim.fn.setqflist({}, "r")
-    pcall(vim.fn.setloclist, 0, {}, "r")
+    vim.fn.setqflist({}, "f")
+    pcall(vim.fn.setloclist, 0, {}, "f")
     vim.notify = original_notify
     vim.ui.select = original_select
     os.date = original_date
     package.loaded.oil = original_oil
     package.preload.oil = original_preload_oil
+    qfstore.setup()
     vim.cmd.cd(original_cwd)
     vim.fn.delete(project, "rf")
 
@@ -114,6 +118,171 @@ it("registers every public command", function()
     } do
         equal(2, vim.fn.exists(":" .. command), command .. " is missing")
     end
+end)
+
+it("configures relative, absolute, and callback store directories", function()
+    with_project(function(project)
+        local function store_in(dir, name)
+            set_qflist(name, {
+                { filename = name .. ".lua", lnum = 1, text = name },
+            })
+            truthy(qfstore.store { name = name })
+            truthy(
+                vim.fn.filereadable(vim.fs.joinpath(dir, name .. ".json")) == 1
+            )
+        end
+
+        local relative_dir = vim.fs.joinpath(project, ".qfstore")
+        qfstore.setup { store_dir = ".qfstore" }
+        store_in(relative_dir, "relative")
+        equal(relative_dir, qfstore.list()[1].path:match "^(.*)/relative.json$")
+        truthy(qfstore.exists "relative")
+
+        vim.fn.setqflist({}, "r", { items = {} })
+        truthy(qfstore.load { name = "relative" })
+        equal("relative", vim.fn.getqflist()[1].text)
+        vim.cmd "silent! cclose"
+
+        local oil_path
+        package.loaded.oil = {
+            open = function(path)
+                oil_path = path
+            end,
+        }
+        qfstore.open_store()
+        equal(relative_dir, oil_path)
+        truthy(qfstore.remove "relative")
+        equal(false, qfstore.exists "relative")
+
+        local absolute_dir = vim.fs.joinpath(project, "absolute-store")
+        qfstore.setup { store_dir = absolute_dir }
+        store_in(absolute_dir, "absolute")
+
+        local callback_cwd
+        local callback_dir = vim.fs.joinpath(project, "callback-store")
+        qfstore.setup {
+            store_dir = function(cwd)
+                callback_cwd = cwd
+                return "callback-store"
+            end,
+        }
+        store_in(callback_dir, "callback")
+        equal(project, callback_cwd)
+    end)
+end)
+
+it("uses configured default names in the Lua API and commands", function()
+    with_project(function()
+        set_qflist("lua", {
+            { filename = "lua.lua", lnum = 1, text = "lua" },
+        })
+        qfstore.setup {
+            default_name = function()
+                return "lua-default"
+            end,
+        }
+        truthy(qfstore.store())
+        truthy(qfstore.exists "lua-default")
+
+        set_qflist("command", {
+            { filename = "command.lua", lnum = 1, text = "command" },
+        })
+        qfstore.setup {
+            default_name = function()
+                return "command-default"
+            end,
+        }
+        vim.cmd "QfStore"
+        truthy(qfstore.exists "command-default")
+    end)
+end)
+
+it("can leave the quickfix window closed after loading", function()
+    with_project(function()
+        set_qflist("closed", {
+            { filename = "closed.lua", lnum = 1, text = "closed" },
+        })
+        truthy(qfstore.store { name = "closed" })
+        vim.fn.setqflist({}, "r", { items = {} })
+
+        qfstore.setup { open_quickfix = false }
+        truthy(qfstore.load { name = "closed" })
+        equal(0, vim.fn.getqflist({ winid = 1 }).winid)
+        equal("closed", vim.fn.getqflist()[1].text)
+    end)
+end)
+
+it("resets omitted setup options to their defaults", function()
+    with_project(function(project)
+        qfstore.setup { store_dir = ".custom-store", open_quickfix = false }
+        qfstore.setup()
+        set_qflist("reset", {
+            { filename = "reset.lua", lnum = 1, text = "reset" },
+        })
+        truthy(qfstore.store { name = "reset" })
+        truthy(
+            vim.fn.filereadable(
+                vim.fs.joinpath(project, ".vim", "lists", "reset.json")
+            ) == 1
+        )
+
+        vim.fn.setqflist({}, "r", { items = {} })
+        truthy(qfstore.load { name = "reset" })
+        truthy(vim.fn.getqflist({ winid = 1 }).winid ~= 0)
+    end)
+end)
+
+it("rejects invalid setup options and callback results", function()
+    with_project(function()
+        local function rejects(opts, message)
+            local ok, err = pcall(qfstore.setup, opts)
+            equal(false, ok)
+            contains(err, message)
+        end
+
+        rejects("invalid", "setup options must be a table")
+        rejects(false, "setup options must be a table")
+        rejects({ unknown = true }, "unknown setup option 'unknown'")
+        rejects({ store_dir = 1 }, "invalid value for setup option 'store_dir'")
+        rejects(
+            { default_name = "name" },
+            "invalid value for setup option 'default_name'"
+        )
+        rejects(
+            { open_quickfix = "yes" },
+            "invalid value for setup option 'open_quickfix'"
+        )
+
+        qfstore.setup {
+            store_dir = function()
+                return nil
+            end,
+        }
+        local ok, err = pcall(qfstore.list)
+        equal(false, ok)
+        contains(err, "store_dir must resolve to a non-empty string")
+
+        qfstore.setup {
+            default_name = function()
+                return ""
+            end,
+        }
+        set_qflist("invalid name", {
+            { filename = "invalid.lua", lnum = 1, text = "invalid" },
+        })
+        ok, err = pcall(qfstore.store)
+        equal(false, ok)
+        contains(err, "default_name must return a non-empty string")
+
+        qfstore.setup {
+            store_dir = function()
+                error("callback problem", 0)
+            end,
+        }
+        ok, err = pcall(qfstore.list)
+        equal(false, ok)
+        contains(err, "store_dir callback failed: callback problem")
+    end)
 end)
 
 it("stores and restores a quickfix list with stable filenames", function()
