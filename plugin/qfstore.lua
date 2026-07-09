@@ -9,6 +9,16 @@ local function default_name(args)
     return config.default_name()
 end
 
+local function complete_entry_names(arg_lead)
+    local names = {}
+    for _, entry in ipairs(qfstore.list()) do
+        if vim.startswith(entry.name, arg_lead) then
+            names[#names + 1] = entry.name
+        end
+    end
+    return names
+end
+
 local function store_with_collision_check(name, loclist)
     if qfstore.exists(name) then
         vim.ui.select({
@@ -98,6 +108,7 @@ vim.api.nvim_create_user_command("QfStore", function(opts)
     store_with_collision_check(default_name(opts), false)
 end, {
     nargs = "?",
+    complete = complete_entry_names,
     desc = "Store current quickfix list (.vim/lists/).",
 })
 
@@ -106,6 +117,7 @@ vim.api.nvim_create_user_command("QfLoad", function(opts)
     load_by_name_or_pick(name, false, "Load quickfix entry:")
 end, {
     nargs = "?",
+    complete = complete_entry_names,
     desc = "Load a stored quickfix list.",
 })
 
@@ -125,6 +137,7 @@ vim.api.nvim_create_user_command("LlStore", function(opts)
     store_with_collision_check(default_name(opts), true)
 end, {
     nargs = "?",
+    complete = complete_entry_names,
     desc = "Store current location list (.vim/lists/).",
 })
 
@@ -133,6 +146,7 @@ vim.api.nvim_create_user_command("LlLoad", function(opts)
     load_by_name_or_pick(name, true, "Load location-list entry:")
 end, {
     nargs = "?",
+    complete = complete_entry_names,
     desc = "Load a stored list into the current window's location list.",
 })
 

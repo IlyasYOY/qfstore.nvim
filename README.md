@@ -80,6 +80,8 @@ their default values. Oil detection remains automatic and falls back to
 
 When no name is provided, store commands use a `YYYYMMDD-HHMMSS` timestamp.
 Storing under an existing name asks before overwriting.
+The four commands that accept a name complete stored entry names, including
+the store commands for intentional overwrites.
 
 ## Storage
 

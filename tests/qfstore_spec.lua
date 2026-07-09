@@ -23,6 +23,18 @@ local function equal(expected, actual, message)
     end
 end
 
+local function same(expected, actual, message)
+    if not vim.deep_equal(expected, actual) then
+        fail(
+            message
+                or ("expected %s, got %s"):format(
+                    vim.inspect(expected),
+                    vim.inspect(actual)
+                )
+        )
+    end
+end
+
 local function truthy(value, message)
     if not value then
         fail(message or ("expected truthy value, got " .. vim.inspect(value)))
@@ -118,6 +130,40 @@ it("registers every public command", function()
     } do
         equal(2, vim.fn.exists(":" .. command), command .. " is missing")
     end
+end)
+
+it("completes stored names for parameterized commands", function()
+    with_project(function()
+        local commands = { "QfStore", "QfLoad", "LlStore", "LlLoad" }
+        local function complete(command, prefix)
+            return vim.fn.getcompletion(command .. " " .. prefix, "cmdline")
+        end
+
+        for _, command in ipairs(commands) do
+            same({}, complete(command, ""))
+        end
+
+        for _, name in ipairs { "alpha", "alpha beta", "Beta", "literal[one]" } do
+            set_qflist(name, {
+                { filename = name .. ".lua", lnum = 1, text = name },
+            })
+            truthy(qfstore.store { name = name })
+        end
+
+        local all_names = vim.tbl_map(function(entry)
+            return entry.name
+        end, qfstore.list())
+        local alpha_names = vim.tbl_filter(function(name)
+            return vim.startswith(name, "alpha")
+        end, all_names)
+
+        for _, command in ipairs(commands) do
+            same(all_names, complete(command, ""))
+            same(alpha_names, complete(command, "alpha"))
+            same({ "literal[one]" }, complete(command, "literal["))
+            same({}, complete(command, "missing"))
+        end
+    end)
 end)
 
 it("configures relative, absolute, and callback store directories", function()
