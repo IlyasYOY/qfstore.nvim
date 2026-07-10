@@ -58,12 +58,24 @@ require("qfstore").setup {
 
     -- Open the quickfix window after loading a quickfix entry.
     open_quickfix = true,
+
+    -- JSON files are compact by default for backward compatibility.
+    json = {
+        indent = false,
+        indent_size = 2,
+        -- Passed to vim.json.encode().
+        escape_slash = false,
+    },
 }
 ```
 
 Each `setup()` call starts from these defaults, so omitted options are reset to
 their default values. Oil detection remains automatic and falls back to
 `:edit` when Oil is unavailable.
+
+Set `json.indent = true` to write human-readable, multi-line JSON.
+`json.indent_size` must be a positive integer and controls the number of spaces
+per nesting level. `json.escape_slash` controls whether `/` is emitted as `\/`.
 
 ## Commands
 

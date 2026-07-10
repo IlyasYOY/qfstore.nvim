@@ -8,6 +8,11 @@ local defaults = {
         return os.date "%Y%m%d-%H%M%S"
     end,
     open_quickfix = true,
+    json = {
+        indent = false,
+        indent_size = 2,
+        escape_slash = false,
+    },
 }
 
 local config = {}
@@ -21,6 +26,29 @@ local validators = {
     end,
     open_quickfix = function(value)
         return type(value) == "boolean"
+    end,
+    json = function(value)
+        if type(value) ~= "table" then
+            return false
+        end
+        for name, option in pairs(value) do
+            if name == "indent" or name == "escape_slash" then
+                if type(option) ~= "boolean" then
+                    return false
+                end
+            elseif name == "indent_size" then
+                if
+                    type(option) ~= "number"
+                    or option < 1
+                    or option % 1 ~= 0
+                then
+                    return false
+                end
+            else
+                return false
+            end
+        end
+        return true
     end,
 }
 
@@ -64,7 +92,7 @@ function M.setup(opts)
         end
     end
 
-    config = vim.tbl_extend("force", {}, defaults, opts)
+    config = vim.tbl_deep_extend("force", {}, defaults, opts)
 end
 
 ---@return string
@@ -92,6 +120,11 @@ end
 ---@return boolean
 function M.open_quickfix()
     return config.open_quickfix
+end
+
+---@return { indent: boolean, indent_size: integer, escape_slash: boolean }
+function M.json()
+    return config.json
 end
 
 M.setup()
