@@ -69,6 +69,10 @@ local function read_payload(name)
     return vim.json.decode(table.concat(lines, "\n"))
 end
 
+local function read_stored_text(name)
+    return table.concat(vim.fn.readfile(store_path(name)), "\n")
+end
+
 local function set_qflist(title, items)
     vim.fn.setqflist({}, " ", { title = title, items = items })
 end
@@ -243,6 +247,49 @@ it("uses configured default names in the Lua API and commands", function()
     end)
 end)
 
+it("formats stored JSON with the configured indentation", function()
+    with_project(function()
+        local special = 'formatted "value", [x] \\ path'
+        set_qflist(special, {
+            { filename = "formatted.lua", lnum = 1, text = special },
+        })
+
+        truthy(qfstore.store { name = "compact" })
+        equal(false, read_stored_text("compact"):find("\n", 1, true) ~= nil)
+
+        qfstore.setup { json = { indent = true } }
+        truthy(qfstore.store { name = "default-indent" })
+        contains(read_stored_text "default-indent", '\n  "title":')
+
+        qfstore.setup {
+            json = {
+                indent = true,
+                indent_size = 4,
+            },
+        }
+
+        truthy(qfstore.store { name = "formatted" })
+        local text = read_stored_text "formatted"
+        contains(text, '\n    "title":')
+        contains(text, '\n        {\n            "')
+        local decoded = vim.json.decode(text)
+        equal(special, decoded.title)
+        equal(special, decoded.items[1].text)
+    end)
+end)
+
+it("passes slash escaping through to Neovim's JSON serializer", function()
+    with_project(function()
+        set_qflist("https://example.com", {
+            { filename = "slash.lua", lnum = 1, text = "https://example.com" },
+        })
+        qfstore.setup { json = { escape_slash = true } }
+
+        truthy(qfstore.store { name = "escaped" })
+        contains(read_stored_text "escaped", "https:\\/\\/example.com")
+    end)
+end)
+
 it("can leave the quickfix window closed after loading", function()
     with_project(function()
         set_qflist("closed", {
@@ -260,12 +307,17 @@ end)
 
 it("resets omitted setup options to their defaults", function()
     with_project(function(project)
-        qfstore.setup { store_dir = ".custom-store", open_quickfix = false }
+        qfstore.setup {
+            store_dir = ".custom-store",
+            open_quickfix = false,
+            json = { indent = true },
+        }
         qfstore.setup()
         set_qflist("reset", {
             { filename = "reset.lua", lnum = 1, text = "reset" },
         })
         truthy(qfstore.store { name = "reset" })
+        equal(false, read_stored_text("reset"):find("\n", 1, true) ~= nil)
         truthy(
             vim.fn.filereadable(
                 vim.fs.joinpath(project, ".vim", "lists", "reset.json")
@@ -297,6 +349,23 @@ it("rejects invalid setup options and callback results", function()
         rejects(
             { open_quickfix = "yes" },
             "invalid value for setup option 'open_quickfix'"
+        )
+        rejects({ json = true }, "invalid value for setup option 'json'")
+        rejects(
+            { json = { indent = "yes" } },
+            "invalid value for setup option 'json'"
+        )
+        rejects(
+            { json = { indent_size = 0 } },
+            "invalid value for setup option 'json'"
+        )
+        rejects(
+            { json = { escape_slash = "yes" } },
+            "invalid value for setup option 'json'"
+        )
+        rejects(
+            { json = { unknown = true } },
+            "invalid value for setup option 'json'"
         )
 
         qfstore.setup {

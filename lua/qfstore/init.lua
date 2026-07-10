@@ -7,6 +7,7 @@ local SUFFIX = ".json"
 ---@field store_dir? string|fun(cwd: string): string
 ---@field default_name? fun(): string
 ---@field open_quickfix? boolean
+---@field json? { indent?: boolean, indent_size?: integer, escape_slash?: boolean }
 
 ---@class qfstore.Entry
 ---@field name string
@@ -72,6 +73,56 @@ local function to_storable(item)
         type = item.type or "",
         valid = item.valid or 0,
     }
+end
+
+---@param encoded string
+---@param indent_size integer
+---@return string
+local function indent_json(encoded, indent_size)
+    local output = {}
+    local depth = 0
+    local in_string = false
+    local escaped = false
+
+    local function append_indent()
+        output[#output + 1] = string.rep(" ", depth * indent_size)
+    end
+
+    for index = 1, #encoded do
+        local character = encoded:sub(index, index)
+        if in_string then
+            output[#output + 1] = character
+            if escaped then
+                escaped = false
+            elseif character == "\\" then
+                escaped = true
+            elseif character == '"' then
+                in_string = false
+            end
+        elseif character == '"' then
+            in_string = true
+            output[#output + 1] = character
+        elseif character == "{" or character == "[" then
+            output[#output + 1] = character
+            depth = depth + 1
+            output[#output + 1] = "\n"
+            append_indent()
+        elseif character == "}" or character == "]" then
+            depth = depth - 1
+            output[#output + 1] = "\n"
+            append_indent()
+            output[#output + 1] = character
+        elseif character == "," then
+            output[#output + 1] = ",\n"
+            append_indent()
+        elseif character == ":" then
+            output[#output + 1] = ": "
+        else
+            output[#output + 1] = character
+        end
+    end
+
+    return table.concat(output)
 end
 
 ---@param name string
@@ -184,7 +235,12 @@ function M.store(opts)
     }
 
     local path = vim.fs.joinpath(ensure_store_dir(), name .. SUFFIX)
-    local encoded = vim.json.encode(payload)
+    local json = config.json()
+    local encoded =
+        vim.json.encode(payload, { escape_slash = json.escape_slash })
+    if json.indent then
+        encoded = indent_json(encoded, json.indent_size)
+    end
     vim.fn.writefile({ encoded }, path)
 
     return true, #storable
