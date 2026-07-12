@@ -1,0 +1,16 @@
+:LlBrowseStore	qfstore.txt	/*:LlBrowseStore*
+:LlLoad	qfstore.txt	/*:LlLoad*
+:LlRemove	qfstore.txt	/*:LlRemove*
+:LlStore	qfstore.txt	/*:LlStore*
+:QfBrowseStore	qfstore.txt	/*:QfBrowseStore*
+:QfLoad	qfstore.txt	/*:QfLoad*
+:QfRemove	qfstore.txt	/*:QfRemove*
+:QfStore	qfstore.txt	/*:QfStore*
+qfstore	qfstore.txt	/*qfstore*
+qfstore-api	qfstore.txt	/*qfstore-api*
+qfstore-commands	qfstore.txt	/*qfstore-commands*
+qfstore-health	qfstore.txt	/*qfstore-health*
+qfstore-requirements	qfstore.txt	/*qfstore-requirements*
+qfstore-setup	qfstore.txt	/*qfstore-setup*
+qfstore-storage	qfstore.txt	/*qfstore-storage*
+qfstore.txt	qfstore.txt	/*qfstore.txt*

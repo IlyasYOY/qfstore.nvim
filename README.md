@@ -13,7 +13,7 @@ transient buffer numbers.
 
 ## Installation
 
-With Neovim's built-in `vim.pack`:
+With Neovim 0.12 or newer, use the built-in `vim.pack`:
 
 ```lua
 vim.pack.add {
@@ -25,6 +25,9 @@ require("qfstore").setup {
     open_quickfix = true,
 }
 ```
+
+Neovim 0.11 users should install the plugin with lazy.nvim or another package
+manager.
 
 With [lazy.nvim](https://github.com/folke/lazy.nvim):
 
@@ -131,18 +134,31 @@ end)
 The public functions preserve the same argument and return contracts as the
 original dotfiles module.
 
+## Health
+
+Run `:checkhealth qfstore` to verify module and command registration, inspect
+the resolved store directory, and see whether optional Oil integration is
+available. Missing Oil support is informational because browse commands fall
+back to `:edit`.
+
+See `:help qfstore` for the complete Vim help reference.
+
 ## Development
 
 ```sh
 make help
 make check
+make test NVIM_VERSION=v0.11.7
+make test NVIM_VERSION=v0.12.4
+make test NVIM_VERSION=nightly
 ```
 
 `make help` lists the available development targets and options.
 Running `make` without a target shows the same help output.
-`make check` checks formatting, runs Luacheck, and executes the isolated
-headless Neovim test suite. Set `NVIM_VERSION` to test a downloaded release,
-for example `make test NVIM_VERSION=v0.11.7`.
+`make check` checks formatting, runs Luacheck, executes the isolated headless
+Neovim test suite, and validates the tracked Vim help tags. Set `NVIM_VERSION`
+to test a downloaded release, for example
+`make test NVIM_VERSION=v0.11.7`.
 
 ## License
 

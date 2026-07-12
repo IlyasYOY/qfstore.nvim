@@ -1,28 +1,30 @@
 # qfstore.nvim Agent Guidelines
 
-## Project shape
-
-- Runtime storage and picker APIs live in \`lua/qfstore/init.lua\`.
-- Automatic user-command registration lives in \`plugin/qfstore.lua\`.
-- Tests run in isolated project and XDG directories under ignored
-  \`.test-work/\` and \`.test-home/\`.
-- The plugin has no required runtime dependencies. Oil support must remain
-  optional.
-
-## Compatibility
+## Scope and compatibility
 
 - Support Neovim 0.11 and newer.
-- Preserve the commands and Lua API documented in \`README.md\`.
-- Preserve the project-local \`.vim/lists/*.json\` format so existing entries
-  remain loadable without migration.
+- Preserve every `Qf*` and `Ll*` command and the Lua API documented in
+  `README.md` and `doc/qfstore.txt`.
+- Preserve the project-local `.vim/lists/*.json` format without migration.
 - Keep quickfix loads as new stack entries and continue opening the quickfix
-  window. Location-list loads must remain window-local.
+  window when configured. Location-list loads remain window-local.
+- Oil is optional and browse commands must continue falling back to `:edit`.
 
-## Commands
+## Repository structure
 
-- \`make check\` runs the canonical formatting, lint, and test suite.
-- \`make test\` runs tests with the current \`nvim\`.
-- \`make test NVIM_VERSION=v0.11.7\` runs tests with a downloaded release.
-- \`make format\` formats Lua sources.
+- Runtime modules and focused specs live together under `lua/qfstore/`.
+- Automatic user-command registration remains in `plugin/qfstore.lua`.
+- Startup-command and filesystem integration coverage remains under `tests/`.
+- Vim help lives in `doc/qfstore.txt`; keep `doc/tags` synchronized.
+- Isolate XDG state, logs, fixtures, and working directories under ignored
+  `.test-home/` and `.test-work/`.
 
-Do not commit or push changes unless the user explicitly asks.
+## Development commands
+
+- `make check` is the canonical non-mutating lint, test, and help check.
+- `make test NVIM_VERSION=v0.11.7` verifies minimum compatibility.
+- `make test NVIM_VERSION=v0.12.4` verifies current stable compatibility.
+- `make test NVIM_VERSION=nightly` is the non-blocking CI probe.
+- `make format` formats Lua sources.
+
+Do not commit, push, tag, or publish unless the user explicitly asks.

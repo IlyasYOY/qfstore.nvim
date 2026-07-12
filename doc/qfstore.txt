@@ -1,0 +1,91 @@
+*qfstore.txt*          Persist quickfix and location lists
+
+==============================================================================
+CONTENTS                                                   *qfstore*
+
+1. Requirements                              |qfstore-requirements|
+2. Setup                                     |qfstore-setup|
+3. Commands                                  |qfstore-commands|
+4. Storage                                   |qfstore-storage|
+5. Lua API                                   |qfstore-api|
+6. Health                                    |qfstore-health|
+
+==============================================================================
+1. Requirements                              *qfstore-requirements*
+
+Neovim 0.11 or newer is required. qfstore has no required plugin
+dependencies. oil.nvim is optional; browse commands fall back to :edit.
+
+==============================================================================
+2. Setup                                     *qfstore-setup*
+
+Calling setup is optional: >lua
+
+    require("qfstore").setup {
+        store_dir = ".vim/lists",
+        default_name = function()
+            return os.date "%Y%m%d-%H%M%S"
+        end,
+        open_quickfix = true,
+    }
+<
+A relative store directory is resolved from the current working directory.
+Calling setup again starts from the defaults.
+
+==============================================================================
+3. Commands                                  *qfstore-commands*
+
+                                                        *:QfStore*
+:QfStore [name]        Store the current quickfix list.
+
+                                                        *:QfLoad*
+:QfLoad [name]         Load a quickfix list as a new stack entry.
+
+                                                        *:QfRemove*
+:QfRemove              Select and remove a stored entry.
+
+                                                        *:QfBrowseStore*
+:QfBrowseStore         Browse storage with Oil or :edit.
+
+                                                        *:LlStore*
+:LlStore [name]        Store the current window's location list.
+
+                                                        *:LlLoad*
+:LlLoad [name]         Load into the current window's location list.
+
+                                                        *:LlRemove*
+:LlRemove              Select and remove a stored entry.
+
+                                                        *:LlBrowseStore*
+:LlBrowseStore         Browse storage with Oil or :edit.
+
+==============================================================================
+4. Storage                                   *qfstore-storage*
+
+Entries use the project-local `.vim/lists/<name>.json` format. Stored items
+use filenames rather than transient buffer numbers. Existing files from the
+original dotfiles implementation remain loadable without migration.
+
+==============================================================================
+5. Lua API                                   *qfstore-api*
+
+setup({opts})          Configure storage and quickfix-window behavior.
+exists({name})         Return whether an entry exists.
+list()                 Return stored entries newest first.
+store({opts})          Store a quickfix or location list.
+load({opts})           Restore a quickfix or location list.
+remove({name})         Remove an entry.
+open_store()           Browse the store with Oil or :edit.
+pick_entry({callback}) Select an entry through vim.ui.select().
+
+==============================================================================
+6. Health                                    *qfstore-health*
+
+Run: >vim
+
+    :checkhealth qfstore
+<
+The provider checks module and command availability, resolves the configured
+store directory, and reports whether optional Oil integration is available.
+
+vim:tw=78:ts=8:noet:ft=help:norl:

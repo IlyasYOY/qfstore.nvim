@@ -8,6 +8,8 @@ local function root(path)
 end
 
 local test_home = vim.env.QFSTORE_TEST_HOME or root ".test-home"
+vim.env.NVIM_LOG_FILE = vim.env.NVIM_LOG_FILE
+    or vim.fs.joinpath(test_home, "nvim.log")
 
 vim.env.XDG_CONFIG_HOME = vim.fs.joinpath(test_home, "config")
 vim.env.XDG_DATA_HOME = vim.fs.joinpath(test_home, "data")
@@ -26,6 +28,7 @@ end
 vim.opt.runtimepath:prepend(root())
 vim.opt.shadafile = "NONE"
 vim.opt.swapfile = false
+vim.opt.undofile = false
 
 package.path = root "?.lua" .. ";" .. root "?/init.lua" .. ";" .. package.path
 

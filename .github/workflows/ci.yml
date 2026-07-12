@@ -33,7 +33,7 @@ jobs:
         uses: JohnnyMorganz/stylua-action@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          version: 2.4.0
+          version: 2.5.2
           args: false
 
       - name: Check formatting
@@ -59,10 +59,10 @@ jobs:
             nvim_version: v0.11.7
             experimental: false
           - os: ubuntu-latest
-            nvim_version: v0.12.1
+            nvim_version: v0.12.4
             experimental: false
           - os: macos-latest
-            nvim_version: v0.12.1
+            nvim_version: v0.12.4
             experimental: false
           - os: ubuntu-latest
             nvim_version: nightly
@@ -83,4 +83,4 @@ jobs:
           key: ${{ runner.os }}-${{ runner.arch }}-nvim-${{ matrix.nvim_version }}-${{ hashFiles('Makefile') }}
 
       - name: Test
-        run: make test NVIM_VERSION=${{ matrix.nvim_version }}
+        run: make test help-check NVIM_VERSION=${{ matrix.nvim_version }}

@@ -1,3 +1,5 @@
+.DEFAULT_GOAL := help
+
 STYLUA ?= stylua
 LUACHECK ?= luacheck
 NVIM ?= nvim
@@ -5,8 +7,11 @@ NVIM_VERSION ?=
 DEPDIR ?= .test-deps
 CURL ?= curl -fL --retry 5 --retry-delay 5 --retry-connrefused --create-dirs
 TEST_HOME ?= $(CURDIR)/.test-home
-TEST_ENV := QFSTORE_TEST_HOME=$(TEST_HOME) XDG_CONFIG_HOME=$(TEST_HOME)/config XDG_DATA_HOME=$(TEST_HOME)/data XDG_CACHE_HOME=$(TEST_HOME)/cache XDG_STATE_HOME=$(TEST_HOME)/state
+TEST_WORK ?= $(CURDIR)/.test-work
+TEST_HELP_DIR := $(TEST_WORK)/help/doc
+TEST_ENV := QFSTORE_TEST_HOME=$(TEST_HOME) QFSTORE_TEST_WORK=$(TEST_WORK) XDG_CONFIG_HOME=$(TEST_HOME)/config XDG_DATA_HOME=$(TEST_HOME)/data XDG_CACHE_HOME=$(TEST_HOME)/cache XDG_STATE_HOME=$(TEST_HOME)/state NVIM_LOG_FILE=$(TEST_HOME)/nvim.log
 LUA_DIRS := lua plugin tests
+DOC_FILE := doc/qfstore.txt
 
 ifeq ($(shell uname -s),Darwin)
   ifeq ($(shell uname -m),arm64)
@@ -30,21 +35,23 @@ else
   TEST_NVIM_DEPS :=
 endif
 
-.PHONY: all help nvim test test-verbose format-check lint_stylua lint_luacheck lint format check clean
+.PHONY: all help nvim test test-verbose format format-check lint_luacheck lint_stylua lint help-tags help-check check clean
 
 all: help
 
 help:
 	@printf '%s\n' \
 		'Available targets:' \
-		'  make             Show this help message (default).' \
-		'  make check       Run formatting, lint, and tests.' \
+		'  make              Show this help message (default).' \
+		'  make check        Run lint, tests, and Vim-help validation.' \
 		'  make test         Run the isolated Neovim test suite.' \
 		'  make test-verbose Run tests with verbose output.' \
-		'  make format-check Check Lua formatting.' \
-		'  make lint         Run Luacheck and formatting checks.' \
 		'  make format       Format Lua sources.' \
-		'  make clean        Remove downloaded test dependencies and test state.' \
+		'  make format-check Check Lua formatting.' \
+		'  make lint         Run Luacheck and StyLua checks.' \
+		'  make help-tags    Regenerate tracked Vim help tags.' \
+		'  make help-check   Validate the tracked Vim help tags.' \
+		'  make clean        Remove downloaded dependencies and test state.' \
 		'' \
 		'Variables:' \
 		'  NVIM_VERSION=v0.11.7  Test with a downloaded Neovim release.'
@@ -62,25 +69,38 @@ $(NVIM_STAMP):
 endif
 
 test: $(TEST_NVIM_DEPS)
-	@$(TEST_ENV) $(TEST_NVIM) --headless --noplugin -u tests/minimal_init.lua -c "lua require('tests.runner').run()" -c qa
+	@mkdir -p $(TEST_HOME) $(TEST_WORK)
+	@$(TEST_ENV) $(TEST_NVIM) --headless --noplugin -i NONE -n -u tests/minimal_init.lua -c "lua require('tests.runner').run()" -c qa
 
 test-verbose: $(TEST_NVIM_DEPS)
-	@$(TEST_ENV) $(TEST_NVIM) --headless --noplugin -u tests/minimal_init.lua -c "lua require('tests.runner').run({ verbose = true })" -c qa
-
-format-check:
-	$(STYLUA) --color always --check $(LUA_DIRS)
-
-lint_stylua: format-check
-
-lint_luacheck:
-	$(LUACHECK) $(LUA_DIRS)
-
-lint: lint_luacheck lint_stylua
+	@mkdir -p $(TEST_HOME) $(TEST_WORK)
+	@$(TEST_ENV) $(TEST_NVIM) --headless --noplugin -i NONE -n -u tests/minimal_init.lua -c "lua require('tests.runner').run({ verbose = true })" -c qa
 
 format:
 	$(STYLUA) $(LUA_DIRS)
 
-check: format-check lint_luacheck test
+format-check:
+	$(STYLUA) --color always --check $(LUA_DIRS)
+
+lint_luacheck:
+	$(LUACHECK) $(LUA_DIRS)
+
+lint_stylua: format-check
+
+lint: lint_luacheck lint_stylua
+
+help-tags: $(TEST_NVIM_DEPS)
+	@mkdir -p $(TEST_HOME) $(TEST_WORK)
+	@$(TEST_ENV) $(TEST_NVIM) --headless --clean -u NONE -i NONE -n -c "helptags doc" -c qa
+
+help-check: $(TEST_NVIM_DEPS)
+	@rm -rf $(TEST_HELP_DIR)
+	@mkdir -p $(TEST_HOME) $(TEST_HELP_DIR)
+	@cp $(DOC_FILE) $(TEST_HELP_DIR)/
+	@$(TEST_ENV) $(TEST_NVIM) --headless --clean -u NONE -i NONE -n -c "helptags $(TEST_HELP_DIR)" -c qa
+	@cmp -s doc/tags $(TEST_HELP_DIR)/tags || { echo 'doc/tags is stale; run make help-tags'; exit 1; }
+
+check: lint test help-check
 
 clean:
-	rm -rf $(DEPDIR) $(TEST_HOME) .test-work
+	rm -rf $(DEPDIR) $(TEST_HOME) $(TEST_WORK)
