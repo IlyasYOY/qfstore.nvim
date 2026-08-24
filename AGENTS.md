@@ -23,7 +23,7 @@
 
 - `make check` is the canonical non-mutating lint, test, and help check.
 - `make test NVIM_VERSION=v0.11.7` verifies minimum compatibility.
-- `make test NVIM_VERSION=v0.12.4` verifies current stable compatibility.
+- `make test NVIM_VERSION=v0.12.5` verifies current stable compatibility.
 - `make test NVIM_VERSION=nightly` is the non-blocking CI probe.
 - `make format` formats Lua sources.
 

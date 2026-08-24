@@ -149,7 +149,7 @@ See `:help qfstore` for the complete Vim help reference.
 make help
 make check
 make test NVIM_VERSION=v0.11.7
-make test NVIM_VERSION=v0.12.4
+make test NVIM_VERSION=v0.12.5
 make test NVIM_VERSION=nightly
 ```
 
